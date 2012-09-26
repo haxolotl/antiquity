@@ -1,6 +1,7 @@
 
 import math
 from datetime import date
+from exceptions import ValueError
 
 
 class HistoricalDate:
@@ -25,7 +26,7 @@ class HistoricalDate:
         elif self.year < 0:
             return (self.year-1)/100-1
         else:
-            print "you're stupid"    
+            raise ValueError("http://lmgtfy.com/?q=year+0")
         
     def _julian_day(self):
         a = (14-self.month)/12
