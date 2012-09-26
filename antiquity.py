@@ -13,7 +13,6 @@ class HistoricalDate:
         http://www.tondering.dk/claus/cal/julperiod.php#formula
         http://articles.adsabs.harvard.edu/cgi-bin/nph-iarticle_query?bibcode=1983IAPPP..13...16F&db_key=AST&page_ind=0&data_type=GIF&type=SCREEN_VIEW&classic=YES
         """
-        
         self.year = int(year)
         self.month = int(month)
         self.day = int(day)
@@ -24,7 +23,7 @@ class HistoricalDate:
         if self.year > 0:
             return (self.year-1)/100+1
         elif self.year < 0:
-            return (self.year-1)/100-1
+            return (self.year-1)/100 # integer division of negative number is weird!
         else:
             raise ValueError("http://lmgtfy.com/?q=year+0")
         
