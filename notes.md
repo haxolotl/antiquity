@@ -10,7 +10,7 @@ Python dates are good for handling recent dates, but becomes progressively less 
 
 * BC dates aren't recognised at all.
 * All python dates are proleptic Gregorian dates, which become (in some regions) problematic prior to the 1930s, and are pretty much globally useless prior to 1582.
-* Python dates can't represent dates with a coarser resolution than a single day. In human terms, many historical dates are only specific to a month, year, century etc. For instance, Python lacks an object that represents a single year, for example.
+* Python dates can't represent dates with a coarser resolution than a single day. In human terms, many historical dates are only specific to a month, year, century etc. For instance, Python lacks an object that represents a single year (eg. '1770').
 * Some date methods are broken pre 1900, eg. strftime
 * It ignores all other cultural and regional calendrical systems
 
