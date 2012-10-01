@@ -88,3 +88,50 @@ class PGDate(PJDay):
             return "Proleptic Gregorian Date: %dBCE-%d-%d" % (abs(self.year), self.month, self.day)
         else:
             return "Proleptic Gregorian Date: %d-%d-%d" % (self.year, self.month, self.day)
+
+class FuzzyPJDay(PJDay):
+    def __init__(self, *args, **kwargs):
+        if len(args) == 2:
+            self.fuzziness = args[1]
+            super(FuzzyPJDay, self).__init__(int(args[0]))
+        else:
+            raise TypeError("__init__() takes 2 arguments")
+
+    def __repr__(self):
+        return "antiquity.FuzzyPJDay(%d, %r)" % (self.number, self.fuzziness)
+    
+    def __str__(self):
+        return "Julian Day: %d +/- %d days" % (self.number, self.fuzziness.days)
+        
+class FuzzyPGDate(PGDate):
+    def __init__(self, *args, **kwargs):
+        if len(args) == 2:
+            self.fuzziness = args[1]
+            super(FuzzyPGDate, self).__init__(int(args[0]))
+        elif len(args) == 4:
+            self.fuzziness = args[3]
+            year = int(args[0])
+            if year < 0:
+                year = year + 1
+            elif year == 0:
+                raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
+            month = int(args[1])
+            if month > 12 or month < 1:
+                raise ValueError("Month must not be less than 1 or greater than 12")
+            day = int(args[2]) # TO DO - validate input
+            a = (14-month)/12
+            y = year + 4800 - a
+            m = month + 12*a - 3
+            super(FuzzyPGDate, self).__init__(day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+        else:
+            raise TypeError("__init__() takes either 2 or 4 arguments")
+
+    def __repr__(self):
+        return "antiquity.FuzzyPGDate(%d, %d, %d, %r)" % (self.year, self.month, self.day, self.fuzziness)
+    
+    def __str__(self):
+        if self.year < 0:
+            return "Proleptic Gregorian Date: %dBCE-%d-%d +/- %d days" % (abs(self.year), self.month, self.day, self.fuzziness.days)
+        else:
+            return "Proleptic Gregorian Date: %d-%d-%d +/- %d days" % (self.year, self.month, self.day, self.fuzziness.days)
+        
