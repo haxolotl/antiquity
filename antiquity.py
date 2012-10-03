@@ -4,13 +4,36 @@ from datetime import date, timedelta
 from exceptions import ValueError
        
 class PJDay(object):
-        
-    def __init__(self, day_number):
-        self.number = int(math.floor(day_number))
+    """
+    This is the base class from which all our other classes inherit.
+    
+    It defines a date as a Proleptic Julian Day number, and defines a bunch of methods to convert
+    to other date systems.
+    
+    You probably don't want to use it directly unless you're an astronomer, or for some reason you're 
+    starting off with a Julian Day number.
+    
+    Takes a single arg, which should be an int (or a float or string which can be coerced to one)
+    
+    eg. PJDay(2456203)
+    
+    TO DO - accept non-integer values
+
+    """
+    def __init__(self, *args, **kwargs):
+        if kwargs.has_key('julian_day'):
+            self.number = int(math.floor(kwargs['julian_day']))
+        else:
+            raise TypeError("__init__() takes a keyword arg called 'julian_day'")
 #       for now we'll just use integers. fractional days can come later.
 
     @property
     def date(self):
+        """
+        Returns a tuple of 3 ints representing the year, month and day in the Proleptic Gregorian calendar
+        
+        Years BCE are represented as negative numbers. There is no year zero. Hence 1BCE = -1.
+        """
         j = self.number + 32045
         g = j/146097
         dg = j % 146097
@@ -52,17 +75,29 @@ class PJDay(object):
         return self.number - other.number
         
     def __sub__(self, other):
-        return timedelta(days=self.number - other.number)
+        if isinstance(other, timedelta):
+            return self.__class__(julian_day=self.number - other.days)            
+        if isinstance(other, PJDay):
+            return timedelta(days=self.number - other.number)
         
     def __add__(self, other):
         if not isinstance(other, timedelta):
             raise TypeError("unsupported operand type(s) for +: '%s' and '%s'" % (self.__class__, other.__class__))
-        return self.__class__(self.number + other.days)
+        return self.__class__(julian_day=self.number + other.days)
         
 class PGDate(PJDay):
+    """
+    Represents a Proleptic Gregorian Date.
+        
+    Most likely, you will want to pass this 3 args, just like you would with a standard python date object.
+    Alternatively, it will accept a kwarg called julian_day. If this is present, it overrides any args.
+        
+    eg. PGDate(1995,6,17) or PGDate(julian_day=2449885)
+    
+    """
     def __init__(self, *args, **kwargs):
-        if len(args) == 1:
-            super(PGDate, self).__init__(int(args[0]))
+        if kwargs.has_key('julian_day'):
+            super(PGDate, self).__init__(**kwargs)
         elif len(args) == 3:
             year = int(args[0])
             if year < 0:
@@ -78,7 +113,7 @@ class PGDate(PJDay):
             m = month + 12*a - 3
             super(PGDate, self).__init__(day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
         else:
-            raise TypeError("__init__() takes either 1 or 3 arguments")
+            raise TypeError("__init__() takes either a kwarg called 'julian_day' or 3 args")
 
     def __repr__(self):
         return "antiquity.PGDate(%d, %d, %d)" % (self.year, self.month, self.day)
@@ -93,7 +128,7 @@ class FuzzyPJDay(PJDay):
     def __init__(self, *args, **kwargs):
         if len(args) == 2:
             self.fuzziness = args[1]
-            super(FuzzyPJDay, self).__init__(int(args[0]))
+            super(FuzzyPJDay, self).__init__(**kwargs)
         else:
             raise TypeError("__init__() takes 2 arguments")
 
@@ -104,12 +139,24 @@ class FuzzyPJDay(PJDay):
         return "Julian Day: %d +/- %d days" % (self.number, self.fuzziness.days)
         
 class FuzzyPGDate(PGDate):
+    """
+    Just a PGDate, only fuzzy!
+    
+    Can represent date ranges or less granular dates, like 1956, or July 1670
+    
+    Takes up to 3 int args - year, month and day, as well as an optional 'fuzziness' kwarg, which should be a timedelta
+
+    Alternatively, it will accept a kwarg called julian_day. If this is present, it overrides any args.    
+    
+    """
     def __init__(self, *args, **kwargs):
-        if len(args) == 2:
-            self.fuzziness = args[1]
-            super(FuzzyPGDate, self).__init__(int(args[0]))
-        elif len(args) == 4:
-            self.fuzziness = args[3]
+        self.fuzziness = kwargs.get('fuzziness', timedelta(days=0))
+        if kwargs.has_key('julian_day'):
+            # julian_day
+            super(FuzzyPGDate, self).__init__(**kwargs)
+            return
+        if len(args) == 3:
+            # year, month, day
             year = int(args[0])
             if year < 0:
                 year = year + 1
@@ -122,7 +169,41 @@ class FuzzyPGDate(PGDate):
             a = (14-month)/12
             y = year + 4800 - a
             m = month + 12*a - 3
-            super(FuzzyPGDate, self).__init__(day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            super(FuzzyPGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+        elif len(args) == 2:
+            # year, month
+            year = int(args[0])
+            if year < 0:
+                year = year + 1
+            elif year == 0:
+                raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
+            month = int(args[1])
+            if month > 12 or month < 1:
+                raise ValueError("Month must not be less than 1 or greater than 12")
+            day = 16 # THIS NEEDS TO BE NOT WRONG!!!!!!!!!
+            self.fuzziness = self.fuzziness + timedelta(days=30/2)
+            a = (14-month)/12
+            y = year + 4800 - a
+            m = month + 12*a - 3
+            super(FuzzyPGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            
+        elif len(args) == 1:
+            # year only
+            year = int(args[0])
+            if year < 0:
+                year = year + 1
+            elif year == 0:
+                raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
+            month = 7 # THIS IS EVEN WRONGERER !!!!!!!!!!!!!!!!!!!!!!
+            if month > 12 or month < 1:
+                raise ValueError("Month must not be less than 1 or greater than 12")
+            day = 2 # THIS NEEDS TO BE NOT WRONG!!!!!!!!!
+            self.fuzziness = self.fuzziness + timedelta(days=365/2)
+            a = (14-month)/12
+            y = year + 4800 - a
+            m = month + 12*a - 3
+            super(FuzzyPGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            
         else:
             raise TypeError("__init__() takes either 2 or 4 arguments")
 
@@ -135,3 +216,10 @@ class FuzzyPGDate(PGDate):
         else:
             return "Proleptic Gregorian Date: %d-%d-%d +/- %d days" % (self.year, self.month, self.day, self.fuzziness.days)
         
+    @property
+    def start(self):
+        return self - self.fuzziness
+        
+    @property
+    def end(self):
+        return self + self.fuzziness
