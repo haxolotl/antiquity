@@ -111,7 +111,7 @@ class PGDate(PJDay):
             a = (14-month)/12
             y = year + 4800 - a
             m = month + 12*a - 3
-            super(PGDate, self).__init__(day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            super(PGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
         else:
             raise TypeError("__init__() takes either a kwarg called 'julian_day' or 3 args")
 
@@ -123,6 +123,27 @@ class PGDate(PJDay):
             return "Proleptic Gregorian Date: %dBCE-%d-%d" % (abs(self.year), self.month, self.day)
         else:
             return "Proleptic Gregorian Date: %d-%d-%d" % (self.year, self.month, self.day)
+
+    @property
+    def leap_year(self):
+        return (self.year % 4 == 0 and self.year % 100 != 0) or self.year % 400 == 0
+        
+    @property
+    def year_length(self):
+        if self.leap_year:
+            return 366
+        else:
+            return 365
+        
+    @property
+    def month_length(self):
+        normal_lengths = [31,28,31,30,31,30,31,31,30,31,30,31]
+        leap_lengths = [31,29,31,30,31,30,31,31,30,31,30,31]
+        if self.leap_year:
+            return leap_lengths[self.month-1]
+        else:
+            return normal_lengths[self.month-1]
+    
 
 class FuzzyPJDay(PJDay):
     def __init__(self, *args, **kwargs):
@@ -223,3 +244,5 @@ class FuzzyPGDate(PGDate):
     @property
     def end(self):
         return self + self.fuzziness
+        
+    

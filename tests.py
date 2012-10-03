@@ -31,6 +31,10 @@ class TestDate(unittest.TestCase):
                 'mod_julian_day': 42376,
             }
         }
+        self.fire = PGDate(*self.real_dates['great_fire_of_london']['gregorian_date'])
+        self.october = PGDate(*self.real_dates['october_revolution']['gregorian_date'])
+        self.invasion = PGDate(*self.real_dates['invasion_day']['gregorian_date'])
+        self.drake = PGDate(*self.real_dates['nick_drake']['gregorian_date'])
         self.impossible_dates = (
             (0,1,24),
             (2012,0,15),
@@ -71,8 +75,39 @@ class TestDate(unittest.TestCase):
 
     def test_PJDay_to_PGDate(self):
         for value in self.real_dates.values():
-            self.assertEqual(PJDay(value['julian_day']), PGDate(*value['gregorian_date']))
+            self.assertEqual(PJDay(julian_day=value['julian_day']), PGDate(*value['gregorian_date']))
+            
+    def test_leapiness(self):
+        self.assertEqual(PGDate(1964,1,1).leap_year, True)
+        self.assertEqual(PGDate(1963,1,1).leap_year, False)
+        self.assertEqual(PGDate(1900,1,1).leap_year, False)
+        self.assertEqual(PGDate(2000,1,1).leap_year, True)
+        self.assertEqual(PGDate(2011,1,1).year_length, 365)
+        self.assertEqual(PGDate(2012,1,1).year_length, 366)
+
+    def test_month_length(self):
+        self.assertEqual(PGDate(1964,1,1).month_length, 31)
+        self.assertEqual(PGDate(1964,2,1).month_length, 29)
+        self.assertEqual(PGDate(1963,2,1).month_length, 28)
+        self.assertEqual(PGDate(1964,3,1).month_length, 31)
+        self.assertEqual(PGDate(1964,4,1).month_length, 30)
+        self.assertEqual(PGDate(1964,5,1).month_length, 31)
+        self.assertEqual(PGDate(1964,6,1).month_length, 30)
+        self.assertEqual(PGDate(1964,7,1).month_length, 31)
+        self.assertEqual(PGDate(1964,8,1).month_length, 31)
+        self.assertEqual(PGDate(1964,9,1).month_length, 30)
+        self.assertEqual(PGDate(1964,10,1).month_length, 31)
+        self.assertEqual(PGDate(1964,11,1).month_length, 30)
+        self.assertEqual(PGDate(1964,12,1).month_length, 31)
         
+    def test_comparison(self):
+        self.assertTrue(self.drake > self.invasion)
+        self.assertTrue(self.fire < self.october)
+        self.assertTrue(PGDate(-400,3,4) > PGDate(-500,1,1))
+        self.assertTrue(FuzzyPGDate(1930) > FuzzyPGDate(1820))
+        sorted_dates = sorted([self.drake, self.invasion, self.fire, self.october])
+        self.assertEquals(sorted_dates[0], self.fire)
+        self.assertEquals(sorted_dates[3], self.drake)
             
 #     def test_centuries(self):
 #         self.assertEqual(self.last_day_of_20thC.century, 20)
