@@ -22,7 +22,7 @@ class PJDay(object):
     """
     def __init__(self, *args, **kwargs):
         if kwargs.has_key('julian_day'):
-            self.number = int(math.floor(kwargs['julian_day']))
+            self.number = float(kwargs['julian_day'])
         else:
             raise TypeError("__init__() takes a keyword arg called 'julian_day'")
 #       for now we'll just use integers. fractional days can come later.
@@ -35,23 +35,23 @@ class PJDay(object):
         Years BCE are represented as negative numbers. There is no year zero. Hence 1BCE = -1.
         """
         j = self.number + 32045
-        g = j/146097
+        g = j//146097
         dg = j % 146097
-        c = (dg/36524 + 1 ) * 3/4 
+        c = (dg//36524 + 1 ) * 3//4 
         dc = dg - c * 36524
-        b = dc/1461
+        b = dc//1461
         db = dc % 1461
-        a = (db/365 + 1 ) * 3/4
+        a = (db//365 + 1 ) * 3//4
         da = db - a * 365
         y = g * 400 + c * 100 + b * 4 + a 
-        m = (da * 5 +308)/153 - 2 
-        d = da - (m + 4) * 153/5 + 122
-        Y = y - 4800 + (m + 2)/12
+        m = (da * 5 +308)//153 - 2 
+        d = da - (m + 4) * 153//5 + 122
+        Y = y - 4800 + (m + 2)//12
         M = (m + 2) % 12 + 1 
         D = d + 1
         if Y < 1:
             Y = Y - 1
-        return (Y, M, D)
+        return (int(Y), int(M), int(D))
     
     @property
     def year(self):
@@ -85,6 +85,14 @@ class PJDay(object):
             raise TypeError("unsupported operand type(s) for +: '%s' and '%s'" % (self.__class__, other.__class__))
         return self.__class__(julian_day=self.number + other.days)
         
+    @property
+    def weekday(self):
+        return int(math.ceil(self.number)) % 7    
+     
+    @property
+    def isoweekday(self):
+        return self.weekday + 1 
+    
 class PGDate(PJDay):
     """
     Represents a Proleptic Gregorian Date.
@@ -111,7 +119,7 @@ class PGDate(PJDay):
             a = (14-month)/12
             y = year + 4800 - a
             m = month + 12*a - 3
-            super(PGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            super(PGDate, self).__init__(julian_day=(day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)+0.5)
         else:
             raise TypeError("__init__() takes either a kwarg called 'julian_day' or 3 args")
 
@@ -161,7 +169,7 @@ class FuzzyPJDay(PJDay):
         
 class FuzzyPGDate(PGDate):
     """
-    Just a PGDate, only fuzzy!
+    Just like a PGDate, only fuzzy!
     
     Can represent date ranges or less granular dates, like 1956, or July 1670
     
