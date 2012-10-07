@@ -2,7 +2,8 @@
 import math
 from datetime import date, timedelta
 from exceptions import ValueError
-       
+from utils import is_leap_year, get_year_length, get_month_length       
+
 class PJDay(object):
     """
     This is the base class from which all our other classes inherit.
@@ -134,24 +135,15 @@ class PGDate(PJDay):
 
     @property
     def leap_year(self):
-        return (self.year % 4 == 0 and self.year % 100 != 0) or self.year % 400 == 0
+        return is_leap_year(self.year)
         
     @property
     def year_length(self):
-        if self.leap_year:
-            return 366
-        else:
-            return 365
+        return get_year_length(self.year)
         
     @property
     def month_length(self):
-        normal_lengths = [31,28,31,30,31,30,31,31,30,31,30,31]
-        leap_lengths = [31,29,31,30,31,30,31,31,30,31,30,31]
-        if self.leap_year:
-            return leap_lengths[self.month-1]
-        else:
-            return normal_lengths[self.month-1]
-    
+        return get_month_length(self.year, self.month)
 
 class FuzzyPJDay(PJDay):
     def __init__(self, *args, **kwargs):
@@ -166,7 +158,15 @@ class FuzzyPJDay(PJDay):
     
     def __str__(self):
         return "Julian Day: %d +/- %d days" % (self.days, self.fuzziness.days)
+    
+    @property
+    def start(self):
+        return self - self.fuzziness
         
+    @property
+    def end(self):
+        return self + self.fuzziness
+    
 class FuzzyPGDate(PGDate):
     """
     Just like a PGDate, only fuzzy!
@@ -185,57 +185,65 @@ class FuzzyPGDate(PGDate):
             super(FuzzyPGDate, self).__init__(**kwargs)
             return
         if len(args) == 3:
-            # year, month, day
-            year = int(args[0])
-            if year < 0:
-                year = year + 1
-            elif year == 0:
-                raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
-            month = int(args[1])
-            if month > 12 or month < 1:
-                raise ValueError("Month must not be less than 1 or greater than 12")
-            day = int(args[2]) # TO DO - validate input
-            a = (14-month)/12
-            y = year + 4800 - a
-            m = month + 12*a - 3
-            super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            self.create_from_YMD(*args) 
+        
         elif len(args) == 2:
-            # year, month
-            year = int(args[0])
-            if year < 0:
-                year = year + 1
-            elif year == 0:
-                raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
-            month = int(args[1])
-            if month > 12 or month < 1:
-                raise ValueError("Month must not be less than 1 or greater than 12")
-            day = 16 # THIS NEEDS TO BE NOT WRONG!!!!!!!!!
-            self.fuzziness = self.fuzziness + timedelta(days=30/2)
-            a = (14-month)/12
-            y = year + 4800 - a
-            m = month + 12*a - 3
-            super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            self.create_from_YM(*args)
             
+              
         elif len(args) == 1:
-            # year only
-            year = int(args[0])
-            if year < 0:
-                year = year + 1
-            elif year == 0:
-                raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
-            month = 7 # THIS IS EVEN WRONGERER !!!!!!!!!!!!!!!!!!!!!!
-            if month > 12 or month < 1:
-                raise ValueError("Month must not be less than 1 or greater than 12")
-            day = 2 # THIS NEEDS TO BE NOT WRONG!!!!!!!!!
-            self.fuzziness = self.fuzziness + timedelta(days=365/2)
-            a = (14-month)/12
-            y = year + 4800 - a
-            m = month + 12*a - 3
-            super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            self.create_from_Y(*args)
             
         else:
             raise TypeError("__init__() takes either 2 or 4 arguments")
+           
+    def create_from_YMD(self, year, month, day):
+        year = int(year)
+        if year < 0:
+            year = year + 1
+        elif year == 0:
+            raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
+        month = int(month)
+        if month > 12 or month < 1:
+            raise ValueError("Month must not be less than 1 or greater than 12")
+        day = int(day) 
+        maxdays = get_month_length(year, month)
+        if day < 1 or day > maxdays:
+            raise ValueError("Day must not be less than 1 or greater than %s" % maxdays)
+        a = (14-month)/12
+        y = year + 4800 - a
+        m = month + 12*a - 3
+        super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+    
+    def create_from_YM(self, year, month):
+        year = int(year)
+        if year < 0:
+            year = year + 1
+        elif year == 0:
+            raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
+        month = int(month)
+        if month > 12 or month < 1:
+            raise ValueError("Month must not be less than 1 or greater than 12")
+        day = get_month_length(year, month)/2.0 
+        self.fuzziness = self.fuzziness + timedelta(days= day)
+        self.create_from_YMD(year, month, day)
+            
+    def create_from_Y(self, year):
+        year = int(year)
+        if year < 0:
+            year = year + 1
+        elif year == 0:
+            raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
+        month = 7 
+        if is_leap_year(year):
+            day = 3
+            self.fuzziness = self.fuzziness + timedelta(days=366/2.0)
+        else:
+            day = 2.5
+            self.fuzziness = self.fuzziness + timedelta(days=365/2.0)
+        self.create_from_YMD(year, month, day)
 
+            
     def __repr__(self):
         return "antiquity.FuzzyPGDate(%d, %d, %d, %r)" % (self.year, self.month, self.day, self.fuzziness)
     
@@ -252,5 +260,4 @@ class FuzzyPGDate(PGDate):
     @property
     def end(self):
         return self + self.fuzziness
-        
     
