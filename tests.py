@@ -48,29 +48,11 @@ class TestDate(unittest.TestCase):
 #             (2011,2,29),
         )
         
-#         self.gregorian_date_tuples = {
-#             'great_fire': (1666,9,12), # was (1666,9,2) in London (Julian)
-#             'october': (1917,11,7), # was (1917,10,25) in Petrograd (Julian)
-#             'invasion': (1788,1,26),
-#             'tet': (1968,1,31),
-#             'nick_drake': (1974,11,25),
-#             'peterloo': (1819,8,16),
-#             'leila': (1969,8,29),
-#             'venus': (1639,12,4),
-#         }
-#         self.julian_date_tuples{
-#             'joan': (1431,5,30),
-#             'great_fire': (1666,9,2),
-#             'october': (1917,10,25),
-#             'venus': (1639,11,24),
-#             'eclipse': (-1998,5,6), 
-#         }
 
     def test_impossible_dates(self):
         # this doesn't indicate which one failed
         for test_date in self.impossible_dates:
-            with self.assertRaises(ValueError):
-                stupid_date = PGDate(*test_date)
+        	self.assertRaises(ValueError, lambda: PGDate(*test_date))
             
     def test_leap_years(self):
         leap_day = PGDate(2012,2,29)
@@ -79,7 +61,7 @@ class TestDate(unittest.TestCase):
 
     def test_PJDay_to_PGDate(self):
         for value in self.real_dates.values():
-            self.assertEqual(PJDay(julian_day=value['julian_day']), PGDate(*value['gregorian_date']))
+            self.assertEqual(PJDay(days=value['julian_day']), PGDate(*value['gregorian_date']))
             
     def test_leapiness(self):
         self.assertEqual(PGDate(1964,1,1).leap_year, True)
@@ -115,7 +97,7 @@ class TestDate(unittest.TestCase):
             
     def test_weekdays(self):
         for value in self.real_dates.values():
-            self.assertEqual(PJDay(julian_day=value['julian_day']).weekday, value['weekday'])
+            self.assertEqual(PJDay(days=value['julian_day']).weekday, value['weekday'])
                 
 #     def test_centuries(self):
 #         self.assertEqual(self.last_day_of_20thC.century, 20)

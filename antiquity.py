@@ -21,10 +21,10 @@ class PJDay(object):
 
     """
     def __init__(self, *args, **kwargs):
-        if kwargs.has_key('julian_day'):
-            self.number = float(kwargs['julian_day'])
+        if kwargs.has_key('days'):
+            self.days = float(kwargs['days'])
         else:
-            raise TypeError("__init__() takes a keyword arg called 'julian_day'")
+            raise TypeError("__init__() takes a keyword arg called 'days'")
 #       for now we'll just use integers. fractional days can come later.
 
     @property
@@ -34,7 +34,7 @@ class PJDay(object):
         
         Years BCE are represented as negative numbers. There is no year zero. Hence 1BCE = -1.
         """
-        j = self.number + 32045
+        j = self.days + 32045
         g = j//146097
         dg = j % 146097
         c = (dg//36524 + 1 ) * 3//4 
@@ -66,28 +66,28 @@ class PJDay(object):
         return self.date[2]
         
     def __repr__(self):
-        return "antiquity.PJDay(%d)" % self.number
+        return "antiquity.PJDay(%d)" % self.days
         
     def __str__(self):
-        return "Julian Day: %d" % self.number
+        return "Julian Day: %d" % self.days
         
     def __cmp__(self, other):
-        return self.number - other.number
+        return self.days - other.days
         
     def __sub__(self, other):
         if isinstance(other, timedelta):
-            return self.__class__(julian_day=self.number - other.days)            
+            return self.__class__(days=self.days - other.days)            
         if isinstance(other, PJDay):
-            return timedelta(days=self.number - other.number)
+            return timedelta(days=self.days - other.days)
         
     def __add__(self, other):
         if not isinstance(other, timedelta):
             raise TypeError("unsupported operand type(s) for +: '%s' and '%s'" % (self.__class__, other.__class__))
-        return self.__class__(julian_day=self.number + other.days)
+        return self.__class__(days=self.days + other.days)
         
     @property
     def weekday(self):
-        return int(math.ceil(self.number)) % 7    
+        return int(math.ceil(self.days)) % 7    
      
     @property
     def isoweekday(self):
@@ -98,13 +98,13 @@ class PGDate(PJDay):
     Represents a Proleptic Gregorian Date.
         
     Most likely, you will want to pass this 3 args, just like you would with a standard python date object.
-    Alternatively, it will accept a kwarg called julian_day. If this is present, it overrides any args.
+    Alternatively, it will accept a kwarg called days. If this is present, it overrides any args.
         
-    eg. PGDate(1995,6,17) or PGDate(julian_day=2449885)
+    eg. PGDate(1995,6,17) or PGDate(days=2449885)
     
     """
     def __init__(self, *args, **kwargs):
-        if kwargs.has_key('julian_day'):
+        if kwargs.has_key('days'):
             super(PGDate, self).__init__(**kwargs)
         elif len(args) == 3:
             year = int(args[0])
@@ -119,9 +119,9 @@ class PGDate(PJDay):
             a = (14-month)/12
             y = year + 4800 - a
             m = month + 12*a - 3
-            super(PGDate, self).__init__(julian_day=(day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)+0.5)
+            super(PGDate, self).__init__(days=(day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)+0.5)
         else:
-            raise TypeError("__init__() takes either a kwarg called 'julian_day' or 3 args")
+            raise TypeError("__init__() takes either a kwarg called 'days' or 3 args")
 
     def __repr__(self):
         return "antiquity.PGDate(%d, %d, %d)" % (self.year, self.month, self.day)
@@ -162,10 +162,10 @@ class FuzzyPJDay(PJDay):
             raise TypeError("__init__() takes 2 arguments")
 
     def __repr__(self):
-        return "antiquity.FuzzyPJDay(%d, %r)" % (self.number, self.fuzziness)
+        return "antiquity.FuzzyPJDay(%d, %r)" % (self.days, self.fuzziness)
     
     def __str__(self):
-        return "Julian Day: %d +/- %d days" % (self.number, self.fuzziness.days)
+        return "Julian Day: %d +/- %d days" % (self.days, self.fuzziness.days)
         
 class FuzzyPGDate(PGDate):
     """
@@ -175,12 +175,12 @@ class FuzzyPGDate(PGDate):
     
     Takes up to 3 int args - year, month and day, as well as an optional 'fuzziness' kwarg, which should be a timedelta
 
-    Alternatively, it will accept a kwarg called julian_day. If this is present, it overrides any args.    
+    Alternatively, it will accept a kwarg called days. If this is present, it overrides any args.    
     
     """
     def __init__(self, *args, **kwargs):
         self.fuzziness = kwargs.get('fuzziness', timedelta(days=0))
-        if kwargs.has_key('julian_day'):
+        if kwargs.has_key('days'):
             # julian_day
             super(FuzzyPGDate, self).__init__(**kwargs)
             return
@@ -198,7 +198,7 @@ class FuzzyPGDate(PGDate):
             a = (14-month)/12
             y = year + 4800 - a
             m = month + 12*a - 3
-            super(FuzzyPGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
         elif len(args) == 2:
             # year, month
             year = int(args[0])
@@ -214,7 +214,7 @@ class FuzzyPGDate(PGDate):
             a = (14-month)/12
             y = year + 4800 - a
             m = month + 12*a - 3
-            super(FuzzyPGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
             
         elif len(args) == 1:
             # year only
@@ -231,7 +231,7 @@ class FuzzyPGDate(PGDate):
             a = (14-month)/12
             y = year + 4800 - a
             m = month + 12*a - 3
-            super(FuzzyPGDate, self).__init__(julian_day=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+            super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
             
         else:
             raise TypeError("__init__() takes either 2 or 4 arguments")
