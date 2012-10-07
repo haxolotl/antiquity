@@ -52,10 +52,10 @@ class PJDay(object):
         D = d + 1
         if Y < 1:
             Y = Y - 1
-        T = (self.days + 0.5) % 1
-        hrs = T * 24
-        mins = hrs % 1 * 60
-        secs = mins % 1 * 60
+        T = math.modf(self.days + 0.5)[0]
+        hrs = T * 24.0
+        mins = math.modf(hrs)[0] * 60
+        secs = math.modf(mins)[0] * 60
         return (int(Y), int(M), int(D), int(hrs), int(mins), int(secs))
         
     @property
