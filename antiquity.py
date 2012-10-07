@@ -2,7 +2,7 @@
 import math
 from datetime import date, timedelta
 from exceptions import ValueError
-from utils import is_leap_year, get_year_length, get_month_length       
+from utils import is_leap_year, get_year_length, get_month_length, timedelta_to_days    
 
 class PJDay(object):
     """
@@ -29,13 +29,13 @@ class PJDay(object):
 #       for now we'll just use integers. fractional days can come later.
 
     @property
-    def date(self):
+    def datetime(self):
         """
         Returns a tuple of 3 ints representing the year, month and day in the Proleptic Gregorian calendar
         
         Years BCE are represented as negative numbers. There is no year zero. Hence 1BCE = -1.
         """
-        j = self.days + 32045
+        j = self.days + 32044.5
         g = j//146097
         dg = j % 146097
         c = (dg//36524 + 1 ) * 3//4 
@@ -52,19 +52,39 @@ class PJDay(object):
         D = d + 1
         if Y < 1:
             Y = Y - 1
-        return (int(Y), int(M), int(D))
+        T = (self.days + 0.5) % 1
+        hrs = T * 24
+        mins = hrs % 1 * 60
+        secs = mins % 1 * 60
+        return (int(Y), int(M), int(D), int(hrs), int(mins), int(secs))
+        
+    @property
+    def date(self):
+        return self.datetime[:3]
     
     @property
     def year(self):
-        return self.date[0]
+        return self.datetime[0]
 
     @property       
     def month(self):
-        return self.date[1]
+        return self.datetime[1]
         
     @property
     def day(self):
-        return self.date[2]
+        return self.datetime[2]
+        
+    @property
+    def hour(self):
+        return self.datetime[3]
+        
+    @property
+    def minute(self):
+        return self.datetime[3]
+        
+    @property
+    def second(self):
+        return self.datetime[3]
         
     def __repr__(self):
         return "antiquity.PJDay(%d)" % self.days
@@ -77,14 +97,14 @@ class PJDay(object):
         
     def __sub__(self, other):
         if isinstance(other, timedelta):
-            return self.__class__(days=self.days - other.days)            
+            return self.__class__(days=self.days - timedelta_to_days(other))            
         if isinstance(other, PJDay):
             return timedelta(days=self.days - other.days)
         
     def __add__(self, other):
         if not isinstance(other, timedelta):
             raise TypeError("unsupported operand type(s) for +: '%s' and '%s'" % (self.__class__, other.__class__))
-        return self.__class__(days=self.days + other.days)
+        return self.__class__(days=self.days + timedelta_to_days(other))
         
     @property
     def weekday(self):
@@ -210,25 +230,21 @@ class FuzzyPGDate(PGDate):
         if len(args) == 3:
             self.create_from_YMD(*args) 
             return
-            
-            
               
         raise TypeError("__init__() takes either 1, 2 or 3 arguments")
            
     def create_from_YMD(self, year, month, day):
         frac = day - math.floor(day)
-        print frac
         day = int(math.floor(day))
-        print day
         a = (14-month)/12
         y = year + 4800 - a
         m = month + 12*a - 3
-        super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046 + frac)
+        super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046 + 0.5 + frac)
     
     def create_from_YM(self, year, month):
-        day = get_month_length(year, month)/2.0 
-        self.fuzziness = self.fuzziness + timedelta(days= day)
-        self.create_from_YMD(year, month, day)
+        day = get_month_length(year, month)/2.0
+        self.fuzziness = self.fuzziness + timedelta(days=day)
+        self.create_from_YMD(year, month, day + 1)
             
     def create_from_Y(self, year):
         month = 7 
@@ -249,7 +265,22 @@ class FuzzyPGDate(PGDate):
             return "Proleptic Gregorian Date: %dBCE-%d-%d +/- %d days" % (abs(self.year), self.month, self.day, self.fuzziness.days)
         else:
             return "Proleptic Gregorian Date: %d-%d-%d +/- %d days" % (self.year, self.month, self.day, self.fuzziness.days)
-        
+
+    @property
+    def date(self):
+        dt = self.datetime
+        if self.start.day == 1 and self.end.day == 1:
+            # might be a months or years
+            if self.start.month == 1 and self.end.month == 1:
+                # it's actually year(s)
+                if self.end.year - self.start.year == 1:
+                    # it's a single year
+                    return self.datetime[:1]
+            if self.end.month - self.start.month == 1:
+                # it's a single month
+                return self.datetime[:2]
+        return super(FuzzyPGDate, self).date       
+    
     @property
     def start(self):
         return self - self.fuzziness

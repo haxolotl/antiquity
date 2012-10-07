@@ -17,3 +17,6 @@ def get_month_length(year, month):
         return leap_lengths[month-1]
     else:
         return normal_lengths[month-1]
+        
+def timedelta_to_days(timedelta):
+    return timedelta.days + timedelta.seconds/86400.0 
