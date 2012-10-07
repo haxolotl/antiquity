@@ -184,59 +184,56 @@ class FuzzyPGDate(PGDate):
             # julian_day
             super(FuzzyPGDate, self).__init__(**kwargs)
             return
-        if len(args) == 3:
-            self.create_from_YMD(*args) 
-        
-        elif len(args) == 2:
-            self.create_from_YM(*args)
             
-              
-        elif len(args) == 1:
-            self.create_from_Y(*args)
-            
-        else:
-            raise TypeError("__init__() takes either 2 or 4 arguments")
-           
-    def create_from_YMD(self, year, month, day):
-        year = int(year)
+        year = int(args[0])
         if year < 0:
             year = year + 1
         elif year == 0:
             raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
-        month = int(month)
+            
+        if len(args) == 1:
+            self.create_from_Y(*args)
+            return
+        month = int(args[1])
         if month > 12 or month < 1:
             raise ValueError("Month must not be less than 1 or greater than 12")
-        day = int(day) 
+            
+        if len(args) == 2:
+            self.create_from_YM(*args)
+            return
+
+        day = int(args[2]) 
         maxdays = get_month_length(year, month)
         if day < 1 or day > maxdays:
             raise ValueError("Day must not be less than 1 or greater than %s" % maxdays)
+
+        if len(args) == 3:
+            self.create_from_YMD(*args) 
+            return
+            
+            
+              
+        raise TypeError("__init__() takes either 1, 2 or 3 arguments")
+           
+    def create_from_YMD(self, year, month, day):
+        frac = day - math.floor(day)
+        print frac
+        day = int(math.floor(day))
+        print day
         a = (14-month)/12
         y = year + 4800 - a
         m = month + 12*a - 3
-        super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046)
+        super(FuzzyPGDate, self).__init__(days=day+(153*m+2)/5+365*y+y/4-y/100+y/400-32046 + frac)
     
     def create_from_YM(self, year, month):
-        year = int(year)
-        if year < 0:
-            year = year + 1
-        elif year == 0:
-            raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
-        month = int(month)
-        if month > 12 or month < 1:
-            raise ValueError("Month must not be less than 1 or greater than 12")
         day = get_month_length(year, month)/2.0 
         self.fuzziness = self.fuzziness + timedelta(days= day)
         self.create_from_YMD(year, month, day)
             
     def create_from_Y(self, year):
-        year = int(year)
-        if year < 0:
-            year = year + 1
-        elif year == 0:
-            raise ValueError("There is no year zero - http://lmgtfy.com/?q=year+0")
         month = 7 
         if is_leap_year(year):
-            day = 3
+            day = 2
             self.fuzziness = self.fuzziness + timedelta(days=366/2.0)
         else:
             day = 2.5
